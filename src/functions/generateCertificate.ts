@@ -1,4 +1,5 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
+import { S3 } from "aws-sdk";
 import chromium from "chrome-aws-lambda";
 import dayjs from "dayjs";
 import { readFileSync } from "fs";
@@ -31,18 +32,6 @@ const compileTemplate = async (data: ITemplate) => {
 export const handler: APIGatewayProxyHandler = async (event) => {
   const { id, name, grade } = JSON.parse(event.body) as ICreateCertificate;
 
-  await document
-    .put({
-      TableName: "user_certificates",
-      Item: {
-        id,
-        name,
-        grade,
-        created_at: new Date().getTime(),
-      },
-    })
-    .promise();
-
   const response = await document
     .query({
       TableName: "user_certificates",
@@ -52,6 +41,22 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       },
     })
     .promise();
+
+  const userExists = response.Items[0];
+
+  if (!userExists) {
+    await document
+      .put({
+        TableName: "user_certificates",
+        Item: {
+          id,
+          name,
+          grade,
+          created_at: new Date().getTime(),
+        },
+      })
+      .promise();
+  }
 
   const medalPath = join(process.cwd(), "src", "templates", "selo.png");
   const medal = readFileSync(medalPath, "base64");
@@ -83,8 +88,29 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
   await browser.close();
 
+  const s3 = new S3();
+
+  // await s3
+  //   .createBucket({
+  //     Bucket: "bucket-name",
+  //   })
+  //   .promise();
+
+  await s3
+    .putObject({
+      Bucket: "helder-generate-certificate",
+      Key: `${id}.pdf`,
+      ACL: "public-read",
+      Body: pdf,
+      ContentType: "application/pdf",
+    })
+    .promise();
+
   return {
     statusCode: 201,
-    body: JSON.stringify(response.Items[0]),
+    body: JSON.stringify({
+      message: "Certificate generated successfully!",
+      url: `https://helder-generate-certificate.s3.amazonaws.com/${id}.pdf`,
+    }),
   };
 };
