@@ -7,3 +7,8 @@ jspm_packages
 
 # esbuild directories
 .esbuild
+
+# DynamoDB directories
+.dynamodb
+
+.env
