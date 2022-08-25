@@ -1,7 +1,7 @@
 import type { AWS } from "@serverless/typescript";
 
 const serverlessConfiguration: AWS = {
-  service: "serverless",
+  service: "generate-certificate",
   frameworkVersion: "3",
   plugins: [
     "serverless-esbuild",
@@ -20,6 +20,7 @@ const serverlessConfiguration: AWS = {
       AWS_NODEJS_CONNECTION_REUSE_ENABLED: "1",
       NODE_OPTIONS: "--enable-source-maps --stack-trace-limit=1000",
     },
+    lambdaHashingVersion: "20201221",
     iamRoleStatements: [
       {
         Effect: "Allow",
@@ -33,7 +34,10 @@ const serverlessConfiguration: AWS = {
       },
     ],
   },
-  // import the function via paths
+  package: {
+    individually: false,
+    include: ["./src/templates/**"],
+  },
   functions: {
     generateCertificate: {
       handler: "src/functions/generateCertificate.handler",
@@ -60,7 +64,6 @@ const serverlessConfiguration: AWS = {
       ],
     },
   },
-  package: { individually: true },
   custom: {
     esbuild: {
       bundle: true,
